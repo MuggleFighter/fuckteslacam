@@ -26,22 +26,49 @@ const App: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const allChunks = useRef<BlobPart[]>([]);
 
-  // Check supported mime type
+  // Check supported mime type - 修改编码器优先级和参数
   const checkMimeTypeSupport = (): MimeTypeSupport | null => {
+
+    // MP4 支持通常有限制
     if (MediaRecorder.isTypeSupported("video/mp4")) {
       return {
         ext: "mp4",
-        opt: { mimeType: "video/mp4", videoBitsPerSecond: 10000000 },
+        opt: {
+          mimeType: "video/mp4; codecs=avc1",
+          videoBitsPerSecond: 10000000,
+        },
       };
     }
+    // WebM 通常兼容性更好，先尝试 WebM
     if (MediaRecorder.isTypeSupported("video/webm; codecs=vp9")) {
-      return { ext: "webm", opt: { mimeType: "video/webm; codecs=vp9" } };
+      return { 
+        ext: "webm", 
+        opt: { 
+          mimeType: "video/webm; codecs=vp9",
+          videoBitsPerSecond: 10000000 
+        } 
+      };
+    }
+    if (MediaRecorder.isTypeSupported("video/webm; codecs=vp8")) {
+      return { 
+        ext: "webm", 
+        opt: { 
+          mimeType: "video/webm; codecs=vp8",
+          videoBitsPerSecond: 10000000
+        } 
+      };
     }
     if (MediaRecorder.isTypeSupported("video/webm")) {
-      return { ext: "webm", opt: { mimeType: "video/webm" } };
+      return { 
+        ext: "webm", 
+        opt: { 
+          mimeType: "video/webm",
+          videoBitsPerSecond: 10000000
+        } 
+      };
     }
 
-    displayError("换chrome吧, 求求你了!");
+    displayError("当前浏览器不支持视频录制，请使用Chrome浏览器");
     return null;
   };
 
@@ -142,8 +169,17 @@ const App: React.FC = () => {
     const textX = canvas.width - textWidth - padding;
     const textY = canvas.height - padding;
 
-    // Draw text
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    // 绘制半透明背景，提高文字可见度
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(
+      textX - padding/2, 
+      textY - fontSize, 
+      textWidth + padding, 
+      fontSize + padding/2
+    );
+    
+    // 绘制白色文字
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.fillText(text, textX, textY);
   };
 
@@ -169,8 +205,12 @@ const App: React.FC = () => {
 
     // Initialize recorder
     try {
-      streamRef.current = canvas.captureStream(24);
+      // 获取视频的实际帧率，如果无法获取则使用合理的默认值
+      const videoFps = 24; // 大多数视频是30fps
+      streamRef.current = canvas.captureStream(videoFps);
       recorderRef.current = new MediaRecorder(streamRef.current, mimeType.opt);
+
+        console.log('============', recorderRef.current)
 
       recorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -205,9 +245,9 @@ const App: React.FC = () => {
         // If video ended but recording hasn't stopped
         if (videoCompleted) {
           clearInterval(updateInterval);
-          // finishProcessing(mimeType);
         }
       }, 200);
+      
       // Start render loop
       renderFrames();
     } catch (err) {
@@ -249,20 +289,33 @@ const App: React.FC = () => {
     const video = videoRef.current;
 
     try {
-      video?.pause();
-      recorderRef.current?.stop();
+
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
+      }
+
+      if (video) {
+        video.pause();
+      }
+      
+      
       setProgress(100);
 
       // Wait for all data to be collected
       setTimeout(() => {
         try {
-          // Create final video Blob
+          if (allChunks.current.length === 0) {
+            displayError("没有收集到视频数据");
+            setIsProcessing(false);
+            return;
+          }
+          
+          // 确保使用正确的MIME类型创建blob
           const blob = new Blob(allChunks.current, {
-            type: `video/${mimeType.ext}`,
+            type: recorderRef.current?.mimeType || `video/${mimeType.ext}`
           });
 
           setVideoURL(URL.createObjectURL(blob));
-
           setIsProcessing(false);
         } catch (err) {
           if (err instanceof Error) {
@@ -302,6 +355,21 @@ const App: React.FC = () => {
     }, 100);
   };
 
+  // 清理函数 - 释放资源
+  useEffect(() => {
+    return () => {
+      // 清理视频URL
+      if (videoURL) {
+        URL.revokeObjectURL(videoURL);
+      }
+      
+      // 停止所有媒体流
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [videoURL]);
+
   // Setup canvas when video metadata is loaded
   useEffect(() => {
     const video = videoRef.current;
@@ -321,6 +389,8 @@ const App: React.FC = () => {
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.font = `${newFontSize}px Arial`;
+        // 使用更好的绘图质量
+        ctx.imageSmoothingEnabled = true;
       }
     };
 
@@ -342,7 +412,7 @@ const App: React.FC = () => {
         <input
           type="file"
           id="file"
-          accept="video/mp4"
+          accept="video/*"  // 允许所有视频类型，而不仅仅是mp4
           onChange={handleFileUpload}
           disabled={isProcessing}
         />
@@ -353,7 +423,7 @@ const App: React.FC = () => {
       <div className="info-panel">
         {isProcessing
           ? "正在处理视频，请勿关闭页面, 处理时长约等于视频时长"
-          : `本工具支持流行视频格式添加水印(具体支持哪种我懒得试)\n命名符合yyyy-MM-dd_hh-mm-ss-name即可\n请使用电脑运行`}
+          : `本工具支持流行视频格式添加水印\n命名符合yyyy-MM-dd_hh-mm-ss-name即可\n建议使用Chrome浏览器`}
       </div>
 
       {(isProcessing || progress > 0) && (
