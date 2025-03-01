@@ -1,0 +1,139 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* App.css */
+body {
+  font-family: "Arial", sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  color: #333;
+  text-align: center;
+}
+
+.divider {
+  border-top: 1px solid #ddd;
+  margin: 20px 0;
+}
+
+.file-input-container {
+  margin-bottom: 20px;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 100%;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.download-button {
+  background-color: #27ae60;
+}
+
+.download-button:hover {
+  background-color: #219955;
+}
+
+.info-panel {
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 15px 0;
+  white-space: pre-line;
+}
+
+.video-container {
+  position: relative;
+  margin: 20px 0;
+  width: 100%;
+}
+
+canvas {
+  /* display: none; */
+  width: 100%;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+video {
+  display: none;
+}
+
+.error-message {
+  background-color: #ffcccc;
+  color: #cc0000;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.progress-container {
+  margin: 20px 0;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  height: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar {
+  background-color: #3498db;
+  height: 100%;
+  width: 0;
+  transition: width 0.3s;
+}
+
+.progress-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  line-height: 20px;
+  color: white;
+  font-size: 12px;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+}
+
+.status-text {
+  margin-top: 10px;
+  font-size: 14px;
+}
